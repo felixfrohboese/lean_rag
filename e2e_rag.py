@@ -37,12 +37,10 @@ for filename in os.listdir(directory):
 df = pd.DataFrame(transcripts)
 
 
-
 #EMBEDDINGS
 
 embeddings = OpenAIEmbeddings()
 df['embedding'] = embeddings.embed_documents(df['text'].tolist())
-
 
 
 #VECTOR STORAGE
@@ -77,6 +75,8 @@ documents = [
 
 # Initialize LangChain's FAISS wrapper
 vector_store = LangchainFAISS.from_documents(documents, embeddings)
+
+
 
 # Set up RetrievalQA chain
 llm = ChatOpenAI(model_name="gpt-4o-mini")  # Use ChatOpenAI instead of OpenAI
