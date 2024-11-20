@@ -1,8 +1,8 @@
 #!/Users/felixfrohboese/opt/anaconda3/bin/python3.11
 
 import sys
-print(sys.executable)
-print(sys.path)
+# print(sys.executable)
+# print(sys.path)
 
 import os
 import pandas as pd
@@ -17,11 +17,17 @@ from langchain_openai import OpenAI
 from langchain_core.documents import Document  # Add this import
 from langchain_openai import OpenAIEmbeddings  # Change this import
 from langchain_openai import ChatOpenAI  # Add this import
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 dotenv.load_dotenv()    
 openai_api_key = os.getenv('OPENAI_API_KEY')
 
 #DATA PREPARATION
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,
+    chunk_overlap=100,
+    length_function=len,
+)
 
 transcripts = []
 directory = 'transcripts'
@@ -30,9 +36,14 @@ for filename in os.listdir(directory):
     if filename.endswith('.txt'):
         with open(os.path.join(directory, filename), 'r', encoding='utf-8') as file:
             text = file.read()
-            # Basic cleaning (customize as needed)
-            text = text.replace('\n', ' ').strip()
-            transcripts.append({'id': filename, 'text': text})
+            # Split text into chunks
+            chunks = text_splitter.split_text(text)
+            # Create a document for each chunk
+            for i, chunk in enumerate(chunks):
+                transcripts.append({
+                    'id': f"{filename}_chunk_{i}",
+                    'text': chunk
+                })
 
 df = pd.DataFrame(transcripts)
 
@@ -79,11 +90,13 @@ vector_store = LangchainFAISS.from_documents(documents, embeddings)
 
 
 # Set up RetrievalQA chain
-llm = ChatOpenAI(model_name="gpt-4o-mini")  # Use ChatOpenAI instead of OpenAI
+llm = ChatOpenAI(model_name="gpt-4o-mini") 
 qa_chain = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",
-    retriever=vector_store.as_retriever()
+    retriever=vector_store.as_retriever(
+        search_kwargs={"k": 3}  # Limit to top 3 most relevant chunks
+    )
 )
 
 
