@@ -25,7 +25,6 @@ Makes it easier to modify file handling without touching other components
 - Provides the entry point
 
 
-
 ## App Flow
 
 ### main.py Startup
