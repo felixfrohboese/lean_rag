@@ -45,3 +45,17 @@ class VectorStore:
         )
         
         return self.vector_store 
+    
+    def build_vector_store(self, df: pd.DataFrame):
+        """Create a vector store directly from DataFrame without saving to disk"""
+        documents = [
+            Document(page_content=text, metadata={"id": id})
+            for text, id in zip(df['text'], df['id'])
+        ]
+        
+        self.vector_store = LangchainFAISS.from_documents(
+            documents, 
+            self.embeddings
+        )
+        
+        return self.vector_store
