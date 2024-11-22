@@ -5,14 +5,14 @@ from transcript_processor import TranscriptProcessor
 from vector_store import VectorStore
 from query_engine import QueryEngine
 
-st.title("Easy RAG")
+st.title("Lean RAG")
 
 # Add user instructions below the title
 st.markdown("""
 ## AI-powered Q&A Assistant for Private Docs
             
-### What does Easy RAG do?
-Easy RAG will process your uploaded text files (txt format), create a vector database from them and allow you to ask questions about it using the chat interface.
+### What does Lean RAG do?
+Lean RAG will process your uploaded text files (txt format), create a vector database from them and allow you to ask questions about it using the chat interface.
             
 ### How to use it:
 - **Step 1 | Input Parameters**: Provide your OpenAI API along with potential changes to the pre-selected parameters for the solution. By hovering about the info sign of each input field, you get more context. 
