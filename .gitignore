@@ -1,4 +1,7 @@
 /instructions/
+/instructions/
 /archive/
 /lean-rag/
 .env
+/__pycache__/
+.streamlit/secrets.toml   
