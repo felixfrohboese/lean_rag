@@ -15,10 +15,13 @@ st.markdown("""
 This simple RAG app will process your uploaded text files (txt format), create a vector database from them and allow you to ask questions about it using the chat interface.
             
 ### How to use it:
-- **Step 1**: Provide your OpenAI API key to use the selected gpt-4o-mini model, which is the most recent and cost effective LLM by OpenAI
-- **Step 2**: Upload your text files, check the list of files and click on the "Process Files" button to trigger the creation of a database
-- **Step 3**: Ask questions about the content of the uploaded files in the Chat-like interface.
+- **Step 1 | Input Parameters**: Provide your OpenAI API along with potential changes to the pre-selected parameters for the solution. By hovering about the info sign of each input field, you get more context. 
+- **Step 2 | Upload Files**: Upload your text files, check the list of files and click on the "Process Files" button to trigger the creation of an individual vector database for those files.
+- **Step 3 | Ask Questions**: Ask questions about the content of the uploaded files in the Chat interface.
+- **Important Note**: All inputs are saved in the session state, so you don't have to re-input them unless you want to change something. They will however be deleted once you close the app.
             
+
+---
 """)
 
 # Initialize session state variables
@@ -30,16 +33,20 @@ if "query_engine" not in st.session_state:
     st.session_state.query_engine = None
 
 # Request OpenAI API Key
-api_key = st.text_input("Enter your OpenAI API Key", type="password")
+api_key = st.text_input("OpenAI API Key", type="password", help="OpenAI API key to bill your usage of the LLM. Remember to enable limits. Get your API key from https://platform.openai.com/settings/profile/api-keys")
 
 
 # Model configuration
 col1, col2 = st.columns(2)
 with col1:
     model_name = st.selectbox(
-        "Select Model", 
+        "Large Language Model (LLM)", 
         ["gpt-4o", "gpt-4o-mini"],
-        index=0
+        index=0,
+        help="""
+        The model to use for the LLM. 
+        gpt-4o is the most recent general model. 
+        gpt-4o-mini is its more lightweight and cost effective alternative."""
     )
 with col2:
     temperature = st.slider(
@@ -48,7 +55,7 @@ with col2:
         max_value=1.0, 
         value=0.1, 
         step=0.1,
-        help="Controls randomness in responses. Lower values are more focused and deterministic."
+        help="Temperature controls randomness in responses. Lower values are more focused and deterministic. 0.1 is a good value for most cases."
     )
 
 # Retrieval and chunking configuration
@@ -58,28 +65,31 @@ with col1:
         "Number of Retrieved Documents",
         [3, 5, 7, 10],
         index=1,
-        help="Number of most relevant document chunks to retrieve"
+        help="Number of most relevant document chunks to retrieve for augmenting the LLM response by the retrieved context. 3 is a good value for most cases."
     )
 with col2:
     chunk_size = st.selectbox(
         "Chunk Size", 
         [512, 1024, 2048], 
         index=1,
-        help="Size of text chunks for processing"
+        help="Size of text chunks for processing. The size of the chunks is a trade-off between the retrieval quality and the processing time. 1024 is a good value for most cases."
     )
 with col3:
     chunk_overlap = st.selectbox(
         "Chunk Overlap", 
         [64, 128, 256], 
         index=1,
-        help="Overlap between consecutive chunks"
+        help="Overlap between consecutive chunks. The overlap is a trade-off between the retrieval quality and the processing time. 128 is a good value for most cases."
     )
 
 # File uploader section
 uploaded_files = st.file_uploader(
-    "Upload text files", 
+    "Upload Text Files (.txt only)", 
     type=['txt'], 
-    accept_multiple_files=True
+    accept_multiple_files=True,
+    help="""
+    Upload your text files to be processed. The files should be in txt format.
+    """
 )
 
 if uploaded_files:
