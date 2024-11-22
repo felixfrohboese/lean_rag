@@ -19,6 +19,43 @@ if "query_engine" not in st.session_state:
 api_key = st.text_input("Enter your OpenAI API Key", type="password")
 
 if api_key:
+    # Model configuration
+    model_name = st.selectbox(
+        "Select Model", 
+        ["gpt-4o", "gpt-4o-mini"],
+        index=0
+    )
+    temperature = st.slider(
+        "Temperature", 
+        min_value=0.0, 
+        max_value=1.0, 
+        value=0.1, 
+        step=0.1,
+        help="Controls randomness in responses. Lower values are more focused and deterministic."
+    )
+    
+    # Retrieval configuration
+    top_k = st.selectbox(
+        "Number of Retrieved Documents",
+        [3, 5, 7, 10],
+        index=1,
+        help="Number of most relevant document chunks to retrieve"
+    )
+    
+    # Chunking configuration
+    chunk_size = st.selectbox(
+        "Chunk Size", 
+        [512, 1024, 2048], 
+        index=1,
+        help="Size of text chunks for processing"
+    )
+    chunk_overlap = st.selectbox(
+        "Chunk Overlap", 
+        [64, 128, 256], 
+        index=1,
+        help="Overlap between consecutive chunks"
+    )
+
     # File uploader section
     uploaded_files = st.file_uploader(
         "Upload text files", 
@@ -37,10 +74,6 @@ if api_key:
                         with open(file_path, 'wb') as f:
                             f.write(uploaded_file.getvalue())
                     
-                    # Add these to your UI configuration
-                    chunk_size = st.selectbox("Chunk Size", [512, 1024, 2048], index=1)
-                    chunk_overlap = st.selectbox("Chunk Overlap", [64, 128, 256], index=1)
-
                     # Pass these parameters when initializing the processor
                     processor = TranscriptProcessor(
                         directory=temp_dir,
@@ -54,10 +87,13 @@ if api_key:
                     df = vector_store.create_embeddings(transcripts)
                     st.session_state.vector_store = vector_store.build_vector_store(df)
                     
-                    # Initialize query engine
+                    # Initialize query engine with new parameters
                     st.session_state.query_engine = QueryEngine(
                         st.session_state.vector_store, 
-                        api_key=api_key
+                        api_key=api_key,
+                        model_name=model_name,
+                        temperature=temperature,
+                        top_k=top_k
                     )
                     
                 st.success("Files processed successfully!")

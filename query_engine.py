@@ -8,11 +8,12 @@ from langchain.schema.output_parser import StrOutputParser
 import logging
 
 class QueryEngine:
-    def __init__(self, vector_store: FAISS, api_key: str, model_name: str = "gpt-4o"):
+    def __init__(self, vector_store: FAISS, api_key: str, model_name: str = "gpt-4", 
+                 temperature: float = 0.1, top_k: int = 5):
         self.llm = ChatOpenAI(
             model_name=model_name,
             api_key=api_key,
-            temperature=0.1
+            temperature=temperature
         )
         
         prompt_template = """Use the following pieces of context to answer the question. If you cannot find the answer in the context, say so, but try to provide relevant information from the context that might be helpful.
@@ -35,7 +36,7 @@ Answer: """
         )
         
         retriever = vector_store.as_retriever(
-            search_kwargs={"k": 5}
+            search_kwargs={"k": top_k}
         )
         
         # Create the chain using the new interface with proper formatting
