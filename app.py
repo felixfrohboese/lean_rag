@@ -37,8 +37,16 @@ if api_key:
                         with open(file_path, 'wb') as f:
                             f.write(uploaded_file.getvalue())
                     
-                    # Process the files
-                    processor = TranscriptProcessor(directory=temp_dir)
+                    # Add these to your UI configuration
+                    chunk_size = st.selectbox("Chunk Size", [512, 1024, 2048], index=1)
+                    chunk_overlap = st.selectbox("Chunk Overlap", [64, 128, 256], index=1)
+
+                    # Pass these parameters when initializing the processor
+                    processor = TranscriptProcessor(
+                        directory=temp_dir,
+                        chunk_size=chunk_size,
+                        chunk_overlap=chunk_overlap
+                    )
                     transcripts = processor.process_files()
                     
                     # Create vector store

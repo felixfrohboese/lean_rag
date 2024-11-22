@@ -47,9 +47,11 @@ class VectorStore:
         return self.vector_store 
     
     def build_vector_store(self, df: pd.DataFrame):
-        """Create a vector store directly from DataFrame without saving to disk"""
         documents = [
-            Document(page_content=text, metadata={"id": id})
+            Document(
+                page_content=text, 
+                metadata={"id": id, "score": 0.0}
+            )
             for text, id in zip(df['text'], df['id'])
         ]
         
