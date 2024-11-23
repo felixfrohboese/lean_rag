@@ -10,12 +10,13 @@ from transcript_processor import ChunkedTranscript
 
 class VectorStore:
     def __init__(self, api_key: str):
-        self.embeddings = OpenAIEmbeddings(api_key=api_key)
+        self.embeddings = OpenAIEmbeddings(openai_api_key=api_key)
         self.vector_store = None
         
     def create_embeddings(self, transcripts: List[ChunkedTranscript]) -> pd.DataFrame:
         df = pd.DataFrame([{'id': t.id, 'text': t.text} for t in transcripts])
-        df['embedding'] = self.embeddings.embed_documents(df['text'].tolist())
+        if not df.empty:
+            df['embedding'] = self.embeddings.embed_documents(df['text'].tolist())
         return df
     
     def build_index(self, df: pd.DataFrame, save_path: str = None):
@@ -49,10 +50,10 @@ class VectorStore:
     def build_vector_store(self, df: pd.DataFrame):
         documents = [
             Document(
-                page_content=text, 
-                metadata={"id": id, "score": 0.0}
+                page_content=row['text'], 
+                metadata={"id": row['id'], "score": 0.0}
             )
-            for text, id in zip(df['text'], df['id'])
+            for _, row in df.iterrows()
         ]
         
         self.vector_store = LangchainFAISS.from_documents(

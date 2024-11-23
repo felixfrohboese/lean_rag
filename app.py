@@ -12,11 +12,11 @@ st.markdown("""
 ## AI-powered Q&A Assistant for Private Docs
             
 ### What does Lean RAG do?
-Lean RAG will process your uploaded text files (txt format), create a vector database from them and allow you to ask questions about it using the chat interface.
+Lean RAG will process your uploaded documents (txt and pdf formats), create a vector database from them and allow you to ask questions about it using the chat interface.
             
 ### How to use it:
 - **Step 1 | Input Parameters**: Provide your OpenAI API along with potential changes to the pre-selected parameters for the solution. By hovering about the info sign of each input field, you get more context. 
-- **Step 2 | Upload Files**: Upload your text files, check the list of files and click on the "Process Files" button to trigger the creation of an individual vector database for those files.
+- **Step 2 | Upload Files**: Upload your documents (txt or pdf), check the list of files and click on the "Process Files" button to trigger the creation of an individual vector database for those files.
 - **Step 3 | Ask Questions**: Ask questions about the content of the uploaded files in the Chat interface.
 - **Important Note**: All inputs are saved in the session state, so you don't have to re-input them unless you want to change something. They will however be deleted once you close the app.
             
@@ -84,51 +84,74 @@ with col3:
 
 # File uploader section
 uploaded_files = st.file_uploader(
-    "Upload Text Files (.txt only)", 
-    type=['txt'], 
+    "Upload Documents (.txt or .pdf)", 
+    type=['txt', 'pdf'], 
     accept_multiple_files=True,
     help="""
-    Upload your text files to be processed. The files should be in txt format.
+    Upload your documents to be processed. Supported formats:
+    - Text files (.txt)
+    - PDF documents (.pdf)
     """
 )
 
 if uploaded_files:
     if st.button("Process Files"):
         with st.spinner("Processing files and creating vector database..."):
-            # Create temporary directory for uploaded files
-            with tempfile.TemporaryDirectory() as temp_dir:
-                # Save uploaded files to temporary directory
-                for uploaded_file in uploaded_files:
-                    file_path = os.path.join(temp_dir, uploaded_file.name)
-                    with open(file_path, 'wb') as f:
-                        f.write(uploaded_file.getvalue())
+            try:
+                # Create temporary directory for uploaded files
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    # Save uploaded files to temporary directory
+                    for uploaded_file in uploaded_files:
+                        file_path = os.path.join(temp_dir, uploaded_file.name)
+                        with open(file_path, 'wb') as f:
+                            f.write(uploaded_file.getvalue())
+                    
+                    # Process files
+                    processor = TranscriptProcessor(
+                        directory=temp_dir,
+                        chunk_size=chunk_size,
+                        chunk_overlap=chunk_overlap
+                    )
+                    transcripts = processor.process_files()
+                    
+                    # Use a flag to control the flow
+                    process_success = True
+                    
+                    if not transcripts:
+                        st.error("No valid content was extracted from the uploaded files. Please check your files and try again.")
+                        process_success = False
+                    
+                    if process_success:
+                        # Create vector store
+                        vector_store = VectorStore(api_key=api_key)
+                        df = vector_store.create_embeddings(transcripts)
+                        
+                        if df.empty:
+                            st.error("No embeddings could be created. Please check your files and try again.")
+                            process_success = False
+                        
+                        if process_success:
+                            st.session_state.vector_store = vector_store.build_vector_store(df)
+                            
+                            # Initialize query engine with new parameters
+                            st.session_state.query_engine = QueryEngine(
+                                st.session_state.vector_store, 
+                                api_key=api_key,
+                                model_name=model_name,
+                                temperature=temperature,
+                                top_k=top_k
+                            )
+                            
+                            st.success("Files processed successfully!")
                 
-                # Pass these parameters when initializing the processor
-                processor = TranscriptProcessor(
-                    directory=temp_dir,
-                    chunk_size=chunk_size,
-                    chunk_overlap=chunk_overlap
-                )
-                transcripts = processor.process_files()
-                
-                # Create vector store
-                vector_store = VectorStore(api_key=api_key)
-                df = vector_store.create_embeddings(transcripts)
-                st.session_state.vector_store = vector_store.build_vector_store(df)
-                
-                # Initialize query engine with new parameters
-                st.session_state.query_engine = QueryEngine(
-                    st.session_state.vector_store, 
-                    api_key=api_key,
-                    model_name=model_name,
-                    temperature=temperature,
-                    top_k=top_k
-                )
-                
-            st.success("Files processed successfully!")
+            except Exception as e:
+                st.error(f"An error occurred while processing the files: {str(e)}")
+                raise e  # This will show the full error trace in the streamlit app
 
-# Chat interface
+# Chat interface section (add this at the end of app.py)
 if st.session_state.query_engine is not None:
+    st.write("Vector store and query engine are ready!")  # Debug message
+    
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -143,6 +166,12 @@ if st.session_state.query_engine is not None:
 
         # Generate and display assistant response
         with st.chat_message("assistant"):
-            response = st.session_state.query_engine.process_query(prompt)
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response}) 
+            try:
+                response = st.session_state.query_engine.process_query(prompt)
+                st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+            except Exception as e:
+                st.error(f"Error generating response: {str(e)}")
+                raise e
+else:
+    st.info("Please upload and process some documents first to start chatting.")

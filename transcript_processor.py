@@ -2,6 +2,7 @@ import os
 from typing import List, Dict
 from dataclasses import dataclass
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from PyPDF2 import PdfReader
 
 @dataclass
 class ChunkedTranscript:
@@ -27,7 +28,7 @@ class TranscriptProcessor:
         transcripts = []
         
         for filename in os.listdir(self.directory):
-            if filename.endswith('.txt'):
+            if filename.lower().endswith(('.txt', '.pdf')):
                 transcripts.extend(self._process_single_file(filename))
         
         return transcripts
@@ -37,15 +38,23 @@ class TranscriptProcessor:
         file_path = os.path.join(self.directory, filename)
         
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                text = file.read()
-                text_chunks = self.text_splitter.split_text(text)
-                
-                for i, chunk in enumerate(text_chunks):
-                    chunks.append(ChunkedTranscript(
-                        id=f"{filename}_chunk_{i}",
-                        text=chunk
-                    ))
+            if filename.lower().endswith('.pdf'):
+                with open(file_path, 'rb') as file:
+                    pdf_reader = PdfReader(file)
+                    text = ''
+                    for page in pdf_reader.pages:
+                        text += page.extract_text() + '\n'
+            else:
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    text = file.read()
+            
+            text_chunks = self.text_splitter.split_text(text)
+            
+            for i, chunk in enumerate(text_chunks):
+                chunks.append(ChunkedTranscript(
+                    id=f"{filename}_chunk_{i}",
+                    text=chunk
+                ))
         except Exception as e:
             print(f"Error processing file {filename}: {str(e)}")
             
